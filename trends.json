@@ -1,4 +1,9 @@
 {
-  "trends": [{"output":"[{\"json\":{},\"pairedItem\":{\"item\":0}}]","":""}],
-  "timestamp": "2025-09-10T19:13:14.683+02:00"
+  "trends": [
+    {
+      "output": "[{\"json\":{},\"pairedItem\":{\"item\":0}}]",
+      "": ""
+    }
+  ],
+  "lastUpdated": "2025-09-10T17:16:22.230Z"
 }
