@@ -1,12 +1,11 @@
 {
   "trends": [
     {
-      "treeSHA": null,
-      "treeURL": null,
-      "parentSHA": null,
-      "parentURL": null,
-      "verified": false
+      "trends": [
+        {}
+      ],
+      "lastUpdated": "2025-09-10T17:33:22.414Z"
     }
   ],
-  "lastUpdated": "2025-09-10T17:19:52.553Z"
+  "lastUpdated": "2025-09-10T17:33:22.689Z"
 }
