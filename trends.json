@@ -1,1 +1,4 @@
-{   "trends": ["test1", "test2"],   "timestamp": "2025-09-10T19:06:56.056+02:00" }
+{
+  "trends": [{"output":"[{\"json\":{},\"pairedItem\":{\"item\":0}}]"}],
+  "timestamp": "2025-09-10T19:10:52.434+02:00"
+}
