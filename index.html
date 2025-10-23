@@ -129,7 +129,9 @@
     </div>
   </div>
 
- <script>
+<script>
+const REDDIT_BASE = 'https://www.reddit.com';
+
 function pick(obj, keys) {
   for (const k of keys) {
     const v = k.split('.').reduce((a, p) => (a && a[p] !== undefined ? a[p] : undefined), obj);
@@ -138,26 +140,43 @@ function pick(obj, keys) {
   return undefined;
 }
 
-function tryDecodeWrappedArray(data) {
-  // Case 1: data is a single wrapper object with base64 "content"
-  if (data && !Array.isArray(data) && data.content && data.encoding === 'base64') {
+// If the file is a GitHub "contents" wrapper, decode its base64 JSON payload
+function unwrapGitHubContent(payload) {
+  // single wrapper object
+  if (payload && !Array.isArray(payload) && payload.content && payload.encoding === 'base64') {
     try {
-      const decoded = atob(String(data.content).replace(/\n/g, ''));
-      const parsed = JSON.parse(decoded);
-      return parsed;
-    } catch (_) {}
+      const decoded = atob(String(payload.content).replace(/\n/g, ''));
+      return JSON.parse(decoded);
+    } catch (_) { /* fall through */ }
   }
-
-  // Case 2: data is an array of wrapper objects repeating the same file
-  if (Array.isArray(data) && data.length && data[0].content && data[0].encoding === 'base64') {
+  // array of wrappers (same file repeated)
+  if (Array.isArray(payload) && payload.length && payload[0].content && payload[0].encoding === 'base64') {
     try {
-      const decoded = atob(String(data[0].content).replace(/\n/g, ''));
-      const parsed = JSON.parse(decoded);
-      return parsed;
-    } catch (_) {}
+      const decoded = atob(String(payload[0].content).replace(/\n/g, ''));
+      return JSON.parse(decoded);
+    } catch (_) { /* fall through */ }
   }
+  return payload;
+}
 
-  return data; // unchanged
+// Turn whatever “link/url/permalink” you have into a proper absolute URL
+function resolveLink(item) {
+  let link = pick(item, ['link','url','permalink','data.url','data.permalink']);
+  if (!link) return null;
+
+  // If it's a GitHub API/contents URL, ignore it (that's just metadata)
+  if (/api\.github\.com\/repos\/.+\/contents\/trends\.json/.test(link)) return null;
+
+  // Already absolute?
+  if (/^https?:\/\//i.test(link)) return link;
+
+  // Reddit relative paths → make absolute
+  if (link.startsWith('/')) return REDDIT_BASE + link;
+  if (link.startsWith('r/')) return `${REDDIT_BASE}/${link}`;
+  if (link.startsWith('comments/')) return `${REDDIT_BASE}/${link}`;
+
+  // Anything else: treat as not-safe-to-link
+  return null;
 }
 
 async function loadTrends() {
@@ -170,12 +189,12 @@ async function loadTrends() {
 
     let data = await res.json();
 
-    // If the file contains GitHub wrappers, decode the inner JSON:
-    data = tryDecodeWrappedArray(data);
+    // If file contains GitHub wrappers, decode the inner JSON
+    data = unwrapGitHubContent(data);
 
-    // Normalize shapes: accept array or wrapped under common keys
+    // Normalize shapes
     if (!Array.isArray(data)) {
-      data = data?.data || data?.trends || data?.result || data?.items || [];
+      data = data?.data || data?.trends || data?.result || data?.items || data || [];
     }
     if (!Array.isArray(data)) data = [data];
 
@@ -193,37 +212,34 @@ async function loadTrends() {
     list.id = 'trending-list';
 
     data.forEach((item, i) => {
-      // Allow strings or objects
+      // Strings → use as summary
       let summary = typeof item === 'string' ? item : pick(item, [
         'summary','output','text','content','body','selftext','description','aiSummary','gpt_output'
       ]);
 
-      // Title & link
       let title = typeof item === 'object'
         ? pick(item, ['title','postTitle','headline','data.title','name','Title'])
         : undefined;
 
-      // Avoid linking to the GitHub API/contents URL
-      let link = typeof item === 'object'
-        ? (pick(item, ['link','url','permalink','data.url']) || '#')
-        : '#';
-      if (/api\.github\.com\/repos\/.+\/contents\/trends\.json/.test(link)) link = '#';
+      if (!title) {
+        title = summary ? (summary.length > 90 ? summary.slice(0, 90) + '…' : summary) : 'Trending item';
+      }
 
-      if (!title) title = summary
-        ? (summary.length > 90 ? summary.slice(0, 90) + '…' : summary)
-        : `Trending item`;
+      const link = resolveLink(item);
 
       const li = document.createElement('li');
       li.className = 'trend-card';
       li.innerHTML = `
-        <a href="${link}" target="_blank" rel="noopener" class="trend-title">${title}</a>
+        <a ${link ? `href="${link}" target="_blank" rel="noopener"` : ''} class="trend-title">${title}</a>
         <div class="trend-meta">
           <span class="meta-item">⬆ ${Math.floor(Math.random()*40)+1}k</span>
           <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
           <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
         </div>
         <p class="trend-summary">${summary ?? ''}</p>
-        <a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>
+        ${link
+          ? `<a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>`
+          : `<span style="opacity:.6; font-size:.9rem;">No link available</span>`}
       `;
       list.appendChild(li);
     });
@@ -237,7 +253,7 @@ async function loadTrends() {
       <div class="error-message">
         <h2>Oops! Something went wrong</h2>
         <p>Unable to load trending topics. Please try again later.</p>
-        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
+        <p style="font-size: .9rem; opacity: .8; margin-top: 1rem;">Error: ${err.message}</p>
         <button class="refresh-btn" onclick="location.reload()">Try Again</button>
       </div>`;
   }
@@ -249,4 +265,5 @@ setInterval(loadTrends, 5 * 60 * 1000);
 </script>
 </body>
 </html>
+
 
