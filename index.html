@@ -129,74 +129,124 @@
     </div>
   </div>
 
-  <script>
-    async function loadTrends() {
-      const contentDiv = document.getElementById('content');
+ <script>
+function pick(obj, keys) {
+  for (const k of keys) {
+    const v = k.split('.').reduce((a, p) => (a && a[p] !== undefined ? a[p] : undefined), obj);
+    if (v !== undefined && v !== null && v !== '') return v;
+  }
+  return undefined;
+}
 
-      try {
-        // Cache-busted raw GitHub URL
-        const url = 'https://raw.githubusercontent.com/Sinadehesh/reddittrends/main/trends.json?ts=' + Date.now();
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+function tryDecodeWrappedArray(data) {
+  // Case 1: data is a single wrapper object with base64 "content"
+  if (data && !Array.isArray(data) && data.content && data.encoding === 'base64') {
+    try {
+      const decoded = atob(String(data.content).replace(/\n/g, ''));
+      const parsed = JSON.parse(decoded);
+      return parsed;
+    } catch (_) {}
+  }
 
-        let data = await res.json();
+  // Case 2: data is an array of wrapper objects repeating the same file
+  if (Array.isArray(data) && data.length && data[0].content && data[0].encoding === 'base64') {
+    try {
+      const decoded = atob(String(data[0].content).replace(/\n/g, ''));
+      const parsed = JSON.parse(decoded);
+      return parsed;
+    } catch (_) {}
+  }
 
-        // Normalize possible shapes
-        if (!Array.isArray(data)) {
-          data = data.data || data.trends || data.result || data.items || [];
-        }
+  return data; // unchanged
+}
 
-        if (!Array.isArray(data) || data.length === 0) {
-          contentDiv.innerHTML = `
-            <div class="empty-state">
-              <h2>No trending topics available</h2>
-              <p>Check back later for the latest Reddit trends!</p>
-              <button class="refresh-btn" onclick="location.reload()">Refresh Page</button>
-            </div>`;
-          return;
-        }
+async function loadTrends() {
+  const contentDiv = document.getElementById('content');
 
-        const list = document.createElement('ul');
-        list.id = 'trending-list';
+  try {
+    const url = 'https://raw.githubusercontent.com/Sinadehesh/reddittrends/main/trends.json?ts=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        data.forEach((item) => {
-          const title = item.title || item.postTitle || item.headline || 'Trending item';
-          const link  = item.link  || item.url || item.permalink || '#';
-          const summary = item.summary || item.output || item.text || '';
+    let data = await res.json();
 
-          const li = document.createElement('li');
-          li.className = 'trend-card';
-          li.innerHTML = `
-            <a href="${link}" target="_blank" rel="noopener" class="trend-title">${title}</a>
-            <div class="trend-meta">
-              <span class="meta-item">⬆ ${Math.floor(Math.random()*40)+1}k</span>
-              <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
-              <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
-            </div>
-            <p class="trend-summary">${summary}</p>
-            <a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>
-          `;
-          list.appendChild(li);
-        });
+    // If the file contains GitHub wrappers, decode the inner JSON:
+    data = tryDecodeWrappedArray(data);
 
-        contentDiv.innerHTML = '';
-        contentDiv.appendChild(list);
+    // Normalize shapes: accept array or wrapped under common keys
+    if (!Array.isArray(data)) {
+      data = data?.data || data?.trends || data?.result || data?.items || [];
+    }
+    if (!Array.isArray(data)) data = [data];
 
-      } catch (err) {
-        console.error('Error loading trends:', err);
-        contentDiv.innerHTML = `
-          <div class="error-message">
-            <h2>Oops! Something went wrong</h2>
-            <p>Unable to load trending topics. Please try again later.</p>
-            <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
-            <button class="refresh-btn" onclick="location.reload()">Try Again</button>
-          </div>`;
-      }
+    if (!data.length) {
+      contentDiv.innerHTML = `
+        <div class="empty-state">
+          <h2>No trending topics available</h2>
+          <p>Check back later for the latest Reddit trends!</p>
+          <button class="refresh-btn" onclick="location.reload()">Refresh Page</button>
+        </div>`;
+      return;
     }
 
-    // Run once and refresh every 5 minutes
-    loadTrends();
-    setInterval(loadTrends, 5 * 60 * 1000);
-  </script>
+    const list = document.createElement('ul');
+    list.id = 'trending-list';
+
+    data.forEach((item, i) => {
+      // Allow strings or objects
+      let summary = typeof item === 'string' ? item : pick(item, [
+        'summary','output','text','content','body','selftext','description','aiSummary','gpt_output'
+      ]);
+
+      // Title & link
+      let title = typeof item === 'object'
+        ? pick(item, ['title','postTitle','headline','data.title','name','Title'])
+        : undefined;
+
+      // Avoid linking to the GitHub API/contents URL
+      let link = typeof item === 'object'
+        ? (pick(item, ['link','url','permalink','data.url']) || '#')
+        : '#';
+      if (/api\.github\.com\/repos\/.+\/contents\/trends\.json/.test(link)) link = '#';
+
+      if (!title) title = summary
+        ? (summary.length > 90 ? summary.slice(0, 90) + '…' : summary)
+        : `Trending item`;
+
+      const li = document.createElement('li');
+      li.className = 'trend-card';
+      li.innerHTML = `
+        <a href="${link}" target="_blank" rel="noopener" class="trend-title">${title}</a>
+        <div class="trend-meta">
+          <span class="meta-item">⬆ ${Math.floor(Math.random()*40)+1}k</span>
+          <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
+          <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
+        </div>
+        <p class="trend-summary">${summary ?? ''}</p>
+        <a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>
+      `;
+      list.appendChild(li);
+    });
+
+    contentDiv.innerHTML = '';
+    contentDiv.appendChild(list);
+
+  } catch (err) {
+    console.error('Error loading trends:', err);
+    contentDiv.innerHTML = `
+      <div class="error-message">
+        <h2>Oops! Something went wrong</h2>
+        <p>Unable to load trending topics. Please try again later.</p>
+        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
+        <button class="refresh-btn" onclick="location.reload()">Try Again</button>
+      </div>`;
+  }
+}
+
+// Run once and refresh every 5 minutes
+loadTrends();
+setInterval(loadTrends, 5 * 60 * 1000);
+</script>
 </body>
 </html>
+
