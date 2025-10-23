@@ -131,51 +131,54 @@
 
 <script>
 const REDDIT_BASE = 'https://www.reddit.com';
+const REDDIT_LINK_RE =
+  /(https?:\/\/(?:www\.)?reddit\.com\/[^\s"'<>]+|\/r\/[^\s"'<>]+|\/comments\/[^\s"'<>]+|r\/[^\s"'<>]+|comments\/[^\s"'<>]+)/i;
 
 function pick(obj, keys) {
   for (const k of keys) {
     const v = k.split('.').reduce((a, p) => (a && a[p] !== undefined ? a[p] : undefined), obj);
     if (v !== undefined && v !== null && v !== '') return v;
   }
-  return undefined;
 }
 
-// If the file is a GitHub "contents" wrapper, decode its base64 JSON payload
 function unwrapGitHubContent(payload) {
-  // single wrapper object
   if (payload && !Array.isArray(payload) && payload.content && payload.encoding === 'base64') {
-    try {
-      const decoded = atob(String(payload.content).replace(/\n/g, ''));
-      return JSON.parse(decoded);
-    } catch (_) { /* fall through */ }
+    try { return JSON.parse(atob(String(payload.content).replace(/\n/g,''))); } catch {}
   }
-  // array of wrappers (same file repeated)
   if (Array.isArray(payload) && payload.length && payload[0].content && payload[0].encoding === 'base64') {
-    try {
-      const decoded = atob(String(payload[0].content).replace(/\n/g, ''));
-      return JSON.parse(decoded);
-    } catch (_) { /* fall through */ }
+    try { return JSON.parse(atob(String(payload[0].content).replace(/\n/g,''))); } catch {}
   }
   return payload;
 }
 
-// Turn whatever “link/url/permalink” you have into a proper absolute URL
-function resolveLink(item) {
-  let link = pick(item, ['link','url','permalink','data.url','data.permalink']);
-  if (!link) return null;
+function absolutizeRedditPath(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith('/')) return REDDIT_BASE + path;
+  if (path.startsWith('r/') || path.startsWith('comments/')) return `${REDDIT_BASE}/${path}`;
+  return null;
+}
 
-  // If it's a GitHub API/contents URL, ignore it (that's just metadata)
-  if (/api\.github\.com\/repos\/.+\/contents\/trends\.json/.test(link)) return null;
+function findAnyRedditLink(obj, summaryText) {
+  // 1) Known fields
+  let link = pick(obj || {}, ['link','url','permalink','data.url','data.permalink']);
+  link = absolutizeRedditPath(link);
+  if (link) return link;
 
-  // Already absolute?
-  if (/^https?:\/\//i.test(link)) return link;
+  // 2) Look for a Reddit link/relative path anywhere in object string values
+  const scanStrings = [];
+  if (obj && typeof obj === 'object') {
+    for (const v of Object.values(obj)) if (typeof v === 'string') scanStrings.push(v);
+  }
+  if (typeof summaryText === 'string') scanStrings.unshift(summaryText);
 
-  // Reddit relative paths → make absolute
-  if (link.startsWith('/')) return REDDIT_BASE + link;
-  if (link.startsWith('r/')) return `${REDDIT_BASE}/${link}`;
-  if (link.startsWith('comments/')) return `${REDDIT_BASE}/${link}`;
-
-  // Anything else: treat as not-safe-to-link
+  for (const s of scanStrings) {
+    const m = typeof s === 'string' ? s.match(REDDIT_LINK_RE) : null;
+    if (m) {
+      const fixed = absolutizeRedditPath(m[0]);
+      if (fixed) return fixed;
+    }
+  }
   return null;
 }
 
@@ -187,15 +190,8 @@ async function loadTrends() {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    let data = await res.json();
-
-    // If file contains GitHub wrappers, decode the inner JSON
-    data = unwrapGitHubContent(data);
-
-    // Normalize shapes
-    if (!Array.isArray(data)) {
-      data = data?.data || data?.trends || data?.result || data?.items || data || [];
-    }
+    let data = unwrapGitHubContent(await res.json());
+    if (!Array.isArray(data)) data = data?.data || data?.trends || data?.result || data?.items || data || [];
     if (!Array.isArray(data)) data = [data];
 
     if (!data.length) {
@@ -212,20 +208,17 @@ async function loadTrends() {
     list.id = 'trending-list';
 
     data.forEach((item, i) => {
-      // Strings → use as summary
-      let summary = typeof item === 'string' ? item : pick(item, [
-        'summary','output','text','content','body','selftext','description','aiSummary','gpt_output'
-      ]);
+      const isString = typeof item === 'string';
+      const summary = isString
+        ? item
+        : (pick(item, ['summary','output','text','content','body','selftext','description','aiSummary','gpt_output']) || '');
 
-      let title = typeof item === 'object'
+      let title = !isString
         ? pick(item, ['title','postTitle','headline','data.title','name','Title'])
         : undefined;
+      if (!title) title = summary ? (summary.length > 90 ? summary.slice(0, 90) + '…' : summary) : `Trending item`;
 
-      if (!title) {
-        title = summary ? (summary.length > 90 ? summary.slice(0, 90) + '…' : summary) : 'Trending item';
-      }
-
-      const link = resolveLink(item);
+      const link = findAnyRedditLink(isString ? {} : item, summary);
 
       const li = document.createElement('li');
       li.className = 'trend-card';
@@ -236,7 +229,7 @@ async function loadTrends() {
           <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
           <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
         </div>
-        <p class="trend-summary">${summary ?? ''}</p>
+        <p class="trend-summary">${summary || ''}</p>
         ${link
           ? `<a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>`
           : `<span style="opacity:.6; font-size:.9rem;">No link available</span>`}
@@ -253,17 +246,18 @@ async function loadTrends() {
       <div class="error-message">
         <h2>Oops! Something went wrong</h2>
         <p>Unable to load trending topics. Please try again later.</p>
-        <p style="font-size: .9rem; opacity: .8; margin-top: 1rem;">Error: ${err.message}</p>
+        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
         <button class="refresh-btn" onclick="location.reload()">Try Again</button>
       </div>`;
   }
 }
 
-// Run once and refresh every 5 minutes
 loadTrends();
 setInterval(loadTrends, 5 * 60 * 1000);
 </script>
+
 </body>
 </html>
+
 
 
