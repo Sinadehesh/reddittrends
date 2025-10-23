@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Reddit Trending Summaries</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -27,7 +23,6 @@
       100% { background-position: 0% 50%; }
     }
 
-    /* Floating background elements */
     .bg-element {
       position: fixed;
       border-radius: 50%;
@@ -35,295 +30,78 @@
       backdrop-filter: blur(5px);
       animation: float 20s infinite ease-in-out;
     }
+    .bg-element:nth-child(1) { width: 300px; height: 300px; top: -150px; left: -150px; animation-delay: 0s; }
+    .bg-element:nth-child(2) { width: 200px; height: 200px; bottom: -100px; right: -100px; animation-delay: 5s; }
+    .bg-element:nth-child(3) { width: 150px; height: 150px; top: 50%; left: -75px; animation-delay: 10s; }
 
-    .bg-element:nth-child(1) {
-      width: 300px;
-      height: 300px;
-      top: -150px;
-      left: -150px;
-      animation-delay: 0s;
-    }
+    @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 33%{transform:translateY(-30px) rotate(120deg)} 66%{transform:translateY(30px) rotate(240deg)} }
 
-    .bg-element:nth-child(2) {
-      width: 200px;
-      height: 200px;
-      bottom: -100px;
-      right: -100px;
-      animation-delay: 5s;
-    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
 
-    .bg-element:nth-child(3) {
-      width: 150px;
-      height: 150px;
-      top: 50%;
-      left: -75px;
-      animation-delay: 10s;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      33% { transform: translateY(-30px) rotate(120deg); }
-      66% { transform: translateY(30px) rotate(240deg); }
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 3rem;
-      animation: slideDown 0.8s ease-out;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-50px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    header { text-align: center; margin-bottom: 3rem; animation: slideDown 0.8s ease-out; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
 
     h1 {
       font-size: clamp(2.5rem, 5vw, 4rem);
       font-weight: 800;
       color: white;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
       margin-bottom: 1rem;
       letter-spacing: -1px;
     }
 
-    .reddit-icon {
-      display: inline-block;
-      width: 50px;
-      height: 50px;
-      margin-right: 15px;
-      vertical-align: middle;
-      animation: spin 20s linear infinite;
-    }
+    .reddit-icon { display: inline-block; width: 50px; height: 50px; margin-right: 15px; vertical-align: middle; animation: spin 20s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+    .subtitle { font-size: 1.2rem; color: rgba(255,255,255,0.9); font-weight: 300; }
 
-    .subtitle {
-      font-size: 1.2rem;
-      color: rgba(255, 255, 255, 0.9);
-      font-weight: 300;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 3rem;
-      color: white;
-      font-size: 1.2rem;
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 1rem;
-    }
+    .loading { text-align: center; padding: 3rem; color: white; font-size: 1.2rem; }
+    .loading-spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
 
     .error-message {
       background: rgba(244, 67, 54, 0.9);
-      color: white;
-      padding: 2rem;
-      border-radius: 20px;
-      text-align: center;
-      backdrop-filter: blur(10px);
-      animation: shake 0.5s;
+      color: white; padding: 2rem; border-radius: 20px; text-align: center; backdrop-filter: blur(10px); animation: shake 0.5s;
     }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
 
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-10px); }
-      75% { transform: translateX(10px); }
-    }
-
-    #trending-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 2rem;
-      list-style: none;
-      animation: fadeIn 1s ease-out 0.3s both;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    #trending-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 2rem; list-style: none; animation: fadeIn 1s ease-out 0.3s both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(30px);} to { opacity: 1; transform: translateY(0);} }
 
     .trend-card {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      padding: 1.5rem;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      animation: cardSlide 0.6s ease-out;
-      animation-fill-mode: both;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+      border-radius: 20px; padding: 1.5rem; transition: all .3s cubic-bezier(.4,0,.2,1);
+      cursor: pointer; position: relative; overflow: hidden; animation: cardSlide .6s ease-out; animation-fill-mode: both;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
+    .trend-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#FF4500,#FF6500,#FF8500); transform:scaleX(0); transform-origin:left; transition:transform .3s ease; }
+    .trend-card:hover::before { transform:scaleX(1); }
+    @keyframes cardSlide { from { opacity:0; transform:translateX(-30px);} to { opacity:1; transform:translateX(0);} }
+    .trend-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.2); background: rgba(255,255,255,1); }
+    .trend-card:nth-child(1){animation-delay:.1s} .trend-card:nth-child(2){animation-delay:.2s} .trend-card:nth-child(3){animation-delay:.3s}
+    .trend-card:nth-child(4){animation-delay:.4s} .trend-card:nth-child(5){animation-delay:.5s} .trend-card:nth-child(6){animation-delay:.6s}
 
-    .trend-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #FF4500, #FF6500, #FF8500);
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.3s ease;
-    }
+    .trend-title { font-size: 1.3rem; font-weight: 700; color:#1a1a1a; margin-bottom:.5rem; text-decoration:none; display:block; transition:color .3s ease; }
+    .trend-title:hover { color:#FF4500; }
 
-    .trend-card:hover::before {
-      transform: scaleX(1);
-    }
+    .trend-meta { display:flex; gap:1rem; margin-bottom:1rem; font-size:.85rem; color:#666; }
+    .meta-item { display:flex; align-items:center; gap:.3rem; }
 
-    @keyframes cardSlide {
-      from {
-        opacity: 0;
-        transform: translateX(-30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
+    .trend-summary { color:#444; line-height:1.6; font-size:.95rem; }
 
-    .trend-card:hover {
-      transform: translateY(-10px) scale(1.02);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-      background: rgba(255, 255, 255, 1);
-    }
+    .trend-link { display:inline-flex; align-items:center; gap:.5rem; margin-top:1rem; color:#FF4500; text-decoration:none; font-weight:600; transition:all .3s ease; }
+    .trend-link:hover { gap:.8rem; text-decoration: underline; }
+    .trend-link::after { content:'→'; transition: transform .3s ease; }
+    .trend-link:hover::after { transform: translateX(5px); }
 
-    .trend-card:nth-child(1) { animation-delay: 0.1s; }
-    .trend-card:nth-child(2) { animation-delay: 0.2s; }
-    .trend-card:nth-child(3) { animation-delay: 0.3s; }
-    .trend-card:nth-child(4) { animation-delay: 0.4s; }
-    .trend-card:nth-child(5) { animation-delay: 0.5s; }
-    .trend-card:nth-child(6) { animation-delay: 0.6s; }
+    .empty-state { text-align:center; padding:4rem 2rem; color:white; }
+    .empty-state h2 { font-size:2rem; margin-bottom:1rem; }
 
-    .trend-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 0.5rem;
-      text-decoration: none;
-      display: block;
-      transition: color 0.3s ease;
-    }
-
-    .trend-title:hover {
-      color: #FF4500;
-    }
-
-    .trend-meta {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      color: #666;
-    }
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .trend-summary {
-      color: #444;
-      line-height: 1.6;
-      font-size: 0.95rem;
-    }
-
-    .trend-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 1rem;
-      color: #FF4500;
-      text-decoration: none;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    }
-
-    .trend-link:hover {
-      gap: 0.8rem;
-      text-decoration: underline;
-    }
-
-    .trend-link::after {
-      content: '→';
-      transition: transform 0.3s ease;
-    }
-
-    .trend-link:hover::after {
-      transform: translateX(5px);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: white;
-    }
-
-    .empty-state h2 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-
-    .refresh-btn {
-      background: white;
-      color: #764ba2;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: 50px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 2rem;
-    }
-
-    .refresh-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    }
+    .refresh-btn { background:white; color:#764ba2; border:none; padding:1rem 2rem; border-radius:50px; font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s ease; margin-top:2rem; }
+    .refresh-btn:hover { transform:scale(1.05); box-shadow:0 10px 30px rgba(0,0,0,0.2); }
 
     @media (max-width: 768px) {
-      #trending-list {
-        grid-template-columns: 1fr;
-      }
-      
-      .container {
-        padding: 1rem;
-      }
+      #trending-list { grid-template-columns: 1fr; }
+      .container { padding: 1rem; }
     }
   </style>
 </head>
@@ -335,7 +113,7 @@
   <div class="container">
     <header>
       <h1>
-        <svg class="reddit-icon" viewBox="0 0 24 24" fill="white">
+        <svg class="reddit-icon" viewBox="0 0 24 24" fill="white" aria-hidden="true">
           <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
         </svg>
         Reddit Trending Summaries
@@ -351,78 +129,74 @@
     </div>
   </div>
 
- <script>
-async function loadTrends() {
-  const contentDiv = document.getElementById('content');
+  <script>
+    async function loadTrends() {
+      const contentDiv = document.getElementById('content');
 
-  try {
-    // Cache-busted fetch from your repo
-    const url = 'https://raw.githubusercontent.com/Sinadehesh/reddittrends/main/trends.json?ts=' + Date.now();
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      try {
+        // Cache-busted raw GitHub URL
+        const url = 'https://raw.githubusercontent.com/Sinadehesh/reddittrends/main/trends.json?ts=' + Date.now();
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    let data = await res.json();
+        let data = await res.json();
 
-    // Normalize possible shapes: array OR {data|trends|result|items}
-    if (!Array.isArray(data)) {
-      data = data.data || data.trends || data.result || data.items || [];
+        // Normalize possible shapes
+        if (!Array.isArray(data)) {
+          data = data.data || data.trends || data.result || data.items || [];
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+          contentDiv.innerHTML = `
+            <div class="empty-state">
+              <h2>No trending topics available</h2>
+              <p>Check back later for the latest Reddit trends!</p>
+              <button class="refresh-btn" onclick="location.reload()">Refresh Page</button>
+            </div>`;
+          return;
+        }
+
+        const list = document.createElement('ul');
+        list.id = 'trending-list';
+
+        data.forEach((item) => {
+          const title = item.title || item.postTitle || item.headline || 'Trending item';
+          const link  = item.link  || item.url || item.permalink || '#';
+          const summary = item.summary || item.output || item.text || '';
+
+          const li = document.createElement('li');
+          li.className = 'trend-card';
+          li.innerHTML = `
+            <a href="${link}" target="_blank" rel="noopener" class="trend-title">${title}</a>
+            <div class="trend-meta">
+              <span class="meta-item">⬆ ${Math.floor(Math.random()*40)+1}k</span>
+              <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
+              <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
+            </div>
+            <p class="trend-summary">${summary}</p>
+            <a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>
+          `;
+          list.appendChild(li);
+        });
+
+        contentDiv.innerHTML = '';
+        contentDiv.appendChild(list);
+
+      } catch (err) {
+        console.error('Error loading trends:', err);
+        contentDiv.innerHTML = `
+          <div class="error-message">
+            <h2>Oops! Something went wrong</h2>
+            <p>Unable to load trending topics. Please try again later.</p>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
+            <button class="refresh-btn" onclick="location.reload()">Try Again</button>
+          </div>`;
+      }
     }
 
-    if (!Array.isArray(data) || data.length === 0) {
-      contentDiv.innerHTML = `
-        <div class="empty-state">
-          <h2>No trending topics available</h2>
-          <p>Check back later for the latest Reddit trends!</p>
-          <button class="refresh-btn" onclick="location.reload()">Refresh Page</button>
-        </div>`;
-      return;
-    }
-
-    // Build list
-    const list = document.createElement('ul');
-    list.id = 'trending-list';
-
-    data.forEach((item) => {
-      // Try a few common field names from your pipeline
-      const title = item.title || item.postTitle || item.headline || 'Trending item';
-      const link  = item.link  || item.url || item.permalink || '#';
-      const summary = item.summary || item.output || item.text || '';
-
-      const li = document.createElement('li');
-      li.className = 'trend-card';
-      li.innerHTML = `
-        <a href="${link}" target="_blank" rel="noopener" class="trend-title">${title}</a>
-        <div class="trend-meta">
-          <span class="meta-item">⬆ ${Math.floor(Math.random()*40)+1}k</span>
-          <span class="meta-item">💬 ${Math.floor(Math.random()*5)+1}k</span>
-          <span class="meta-item">🕒 ${Math.floor(Math.random()*24)+1}h ago</span>
-        </div>
-        <p class="trend-summary">${summary}</p>
-        <a href="${link}" target="_blank" rel="noopener" class="trend-link">Read full discussion</a>
-      `;
-      list.appendChild(li);
-    });
-
-    contentDiv.innerHTML = '';
-    contentDiv.appendChild(list);
-
-  } catch (err) {
-    console.error('Error loading trends:', err);
-    contentDiv.innerHTML = `
-      <div class="error-message">
-        <h2>Oops! Something went wrong</h2>
-        <p>Unable to load trending topics. Please try again later.</p>
-        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1rem;">Error: ${err.message}</p>
-        <button class="refresh-btn" onclick="location.reload()">Try Again</button>
-      </div>`;
-  }
-}
-
-// Run once and every 5 minutes
-loadTrends();
-setInterval(loadTrends, 5 * 60 * 1000);
-</script>
+    // Run once and refresh every 5 minutes
+    loadTrends();
+    setInterval(loadTrends, 5 * 60 * 1000);
+  </script>
 </body>
-
 </html>
-
